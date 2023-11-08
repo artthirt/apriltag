@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.15)
 project(apriltag VERSION 3.3.0 LANGUAGES C CXX)
 
 if(POLICY CMP0077)
     cmake_policy(SET CMP0077 NEW)
 endif()
-option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(BUILD_EXAMPLES "Build example executables" ON)
 option(ASAN "Use AddressSanitizer for debug builds to detect memory issues" OFF)
 
@@ -127,7 +127,8 @@ cmake_dependent_option(BUILD_PYTHON_WRAPPER "Builds Python wrapper" ON BUILD_SHA
 if(BUILD_PYTHON_WRAPPER)
     SET(Python_ADDITIONAL_VERSIONS 3)
     find_package(PythonLibs)
-    execute_process(COMMAND which python3 OUTPUT_QUIET RESULT_VARIABLE Python3_NOT_FOUND)
+    #execute_process(COMMAND which python3 OUTPUT_QUIET RESULT_VARIABLE Python3_NOT_FOUND)
+    set(Python3_NOT_FOUND 0)
     execute_process(COMMAND python3 -c "import numpy" RESULT_VARIABLE Numpy_NOT_FOUND)
 endif(BUILD_PYTHON_WRAPPER)
 
@@ -162,6 +163,37 @@ execute_process(COMMAND python3 -m site --user-site OUTPUT_VARIABLE PY_DEST)
 string(STRIP ${PY_DEST} PY_DEST)
 install(FILES ${PROJECT_BINARY_DIR}/apriltag${PY_EXT_SUFFIX} DESTINATION ${PY_DEST})
 endif (NOT Python3_NOT_FOUND AND NOT Numpy_NOT_FOUND AND PYTHONLIBS_FOUND AND BUILD_PYTHON_WRAPPER)
+
+find_package(Python3 COMPONENTS Interpreter Development NumPy)
+
+if(Python3_FOUND)
+    message("!!!! Python3 and Numpy found !!!!")
+    message("python3 inc:     ${Python3_INCLUDE_DIRS}")
+    message("numpy inc:       ${Python3_NumPy_INCLUDE_DIRS}")
+
+    function(make_includable input_file output_file)
+        file(READ ${input_file} content)
+        string(REPLACE "\"" "'" content ${content})
+        string(REPLACE "\n" "\\n" content ${content})
+        set(delim "")
+        set(content "(\"${delim}${content}${delim}\")")
+        file(WRITE ${output_file} "${content}")
+    endfunction(make_includable)
+
+    make_includable(apriltag_detect.docstring apriltag_detect.docstring.h)
+    make_includable(apriltag_py_type.docstring apriltag_py_type.docstring.h)
+
+    add_library(apriltag_python SHARED apriltag_pywrap.c)
+    set_target_properties(apriltag_python PROPERTIES SUFFIX ".pyd")
+    target_include_directories(apriltag_python PUBLIC
+        ${Python3_INCLUDE_DIRS}
+        ${Python3_NumPy_INCLUDE_DIRS}
+    )
+    target_link_libraries(apriltag_python PUBLIC
+        apriltag
+        ${Python3_LIBRARIES}
+    )
+endif()
 
 # Examples
 if (BUILD_EXAMPLES)

@@ -206,7 +206,9 @@ static PyObject* apriltag_detect(apriltag_py_t* self,
     PyArrayObject* image            = NULL;
     PyObject*      detections_tuple = NULL;
 
+#ifndef _MSC_VER
     SET_SIGINT();
+#endif
     if(!PyArg_ParseTuple( args, "O&",
                           PyArray_Converter, &image ))
         goto done;
@@ -300,7 +302,9 @@ static PyObject* apriltag_detect(apriltag_py_t* self,
     Py_XDECREF(image);
     Py_XDECREF(detections_tuple);
 
+#ifndef _MSC_VER
     RESET_SIGINT();
+#endif
     return result;
 }
 
@@ -314,7 +318,7 @@ static const char apriltag_type_docstring[] =
 
 static PyMethodDef apriltag_methods[] =
     { PYMETHODDEF_ENTRY(apriltag_, detect, METH_VARARGS),
-      {}
+    {NULL, NULL, 0, NULL},
     };
 
 static PyTypeObject apriltagType =
@@ -330,7 +334,8 @@ static PyTypeObject apriltagType =
 };
 
 static PyMethodDef methods[] =
-    { {}
+    {
+    {NULL, NULL, 0, NULL},
     };
 
 
